@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"math/big"
 	"reflect"
@@ -199,17 +198,26 @@ func encode(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, k
 			names = append(names, x.AttrNames()...)
 			sort.Strings(names)
 			for i, name := range names {
+				var valMsg string
 				v, err := x.Attr(name)
 				if err != nil || v == nil {
-					log.Fatalf("internal error: dir(%s) includes %q but value has no .%s field", x.Type(), name, name)
+					if err != nil {
+						valMsg = fmt.Sprintf("<ERROR: %s>", err)
+					} else {
+						valMsg = fmt.Sprintf("<ERROR: dir(%s) includes %q but value has no .%s field", x.Type(), name, name)
+					}
 				}
 				if i > 0 {
 					buf.WriteByte(',')
 				}
 				quote(name)
 				buf.WriteByte(':')
-				if err := emit(v); err != nil {
-					return fmt.Errorf("in field .%s: %v", name, err)
+				if valMsg != "" {
+					quote(valMsg)
+				} else {
+					if err := emit(v); err != nil {
+						return fmt.Errorf("in field .%s: %v", name, err)
+					}
 				}
 			}
 			buf.WriteByte('}')
